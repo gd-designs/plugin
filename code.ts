@@ -71,31 +71,33 @@ figma.ui.onmessage = async (msg) => {
             }
           }
         }
-
-        // If no IMAGE node is found, export the entire Artboard as an image
         if (!processedAsImage) {
           try {
-            console.log(`Exporting entire Artboard: ${artboard.name}`);
-            const bytes = await artboard.exportAsync({ format: "PNG" });
+            console.log("Attempting to export artboard:", artboard.name);
+            const bytes = await artboard.exportAsync({
+              format: "PNG",
+              constraint: { type: "SCALE", value: 1 },
+            });
+
+            console.log("Export successful, bytes length:", bytes?.length);
+
+            // Convert bytes to base64
             const base64 = figma.base64Encode(bytes);
 
             results.push({
-              type: "artboard",
-              name: artboard.name,
+              type: "image",
+              name: artboard.name || "Unnamed Artboard",
               base64: base64,
             });
           } catch (error) {
-            console.error("Error exporting Artboard:", error);
-            figma.ui.postMessage({
-              type: "error",
-              message: `Error exporting Artboard ${artboard.name}.`,
-            });
+            console.error("Error exporting Artboard:", artboard.name, error);
           }
         }
       }
     }
 
     console.log("Results:", results);
+
     figma.ui.postMessage({
       type: "process-results",
       results: results,

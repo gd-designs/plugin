@@ -9,6 +9,6 @@
   "editorType": ["figma", "dev"],
   "ui": "ui.html",
   "networkAccess": {
-    "allowedDomains": ["none"]
+    "allowedDomains": ["https://xx6p-p9vy-wihs.n7d.xano.io"]
   }
 }

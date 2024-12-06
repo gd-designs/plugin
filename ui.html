@@ -24,6 +24,24 @@
         border: none;
         border-radius: 5px;
       }
+      #spinner {
+        display: none;
+        margin: 20px auto;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007aff;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
       #image-metadata {
         margin-top: 20px;
         font-size: 13px;
@@ -36,14 +54,22 @@
     <button id="get-metadata">Get Image Metadata</button>
     <button id="process-frame">Process Frame</button>
     <button id="close">Close Plugin</button>
+    <div id="spinner"></div>
     <div id="image-metadata"></div>
     <div id="results"></div>
 
     <script>
-      // Ensure 'process-frame' button exists before assigning handler
       const processFrameButton = document.getElementById("process-frame");
+      const spinner = document.getElementById("spinner");
+      const resultsContainer = document.getElementById("results");
+
       if (processFrameButton) {
         processFrameButton.onclick = () => {
+          // Show spinner and clear previous results
+          spinner.style.display = "block";
+          resultsContainer.innerHTML = "";
+
+          // Send process-frame message to parent
           parent.postMessage({ pluginMessage: { type: "process-frame" } }, "*");
         };
       } else {
@@ -54,7 +80,10 @@
         const message = event.data.pluginMessage;
 
         if (message.type === "process-results") {
-          const resultsContainer = document.getElementById("results");
+          // Hide spinner
+          spinner.style.display = "none";
+
+          // Display results
           resultsContainer.innerHTML = "";
 
           message.results.forEach((result) => {
@@ -76,9 +105,11 @@
             resultsContainer.appendChild(resultDiv);
           });
         } else if (message.type === "error") {
-          document.getElementById(
-            "results"
-          ).textContent = `Error: ${message.message}`;
+          // Hide spinner
+          spinner.style.display = "none";
+
+          // Show error message
+          resultsContainer.textContent = `Error: ${message.message}`;
         }
       };
     </script>
