@@ -12,9 +12,26 @@
         padding: 10px;
         text-align: center;
       }
+
       #message {
         margin: 20px 0;
       }
+
+      #results {
+        margin-top: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+      }
+
+      #results img {
+        max-width: 100%;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+      }
+
       button {
         padding: 10px 20px;
         font-size: 14px;
@@ -23,7 +40,14 @@
         color: #fff;
         border: none;
         border-radius: 5px;
+        margin: 10px;
       }
+
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
       #spinner {
         display: none;
         margin: 20px auto;
@@ -34,6 +58,7 @@
         height: 30px;
         animation: spin 1s linear infinite;
       }
+
       @keyframes spin {
         0% {
           transform: rotate(0deg);
@@ -42,74 +67,85 @@
           transform: rotate(360deg);
         }
       }
-      #image-metadata {
-        margin-top: 20px;
-        font-size: 13px;
-        color: #555;
-      }
     </style>
   </head>
   <body>
     <div id="message">Welcome to the Plugin</div>
-    <button id="get-metadata">Get Image Metadata</button>
     <button id="process-frame">Process Frame</button>
-    <button id="close">Close Plugin</button>
     <div id="spinner"></div>
-    <div id="image-metadata"></div>
     <div id="results"></div>
+    <button id="upload-images" disabled>Upload Images</button>
+    <button id="close">Close Plugin</button>
 
     <script>
       const processFrameButton = document.getElementById("process-frame");
+      const uploadImagesButton = document.getElementById("upload-images");
+      const closeButton = document.getElementById("close");
       const spinner = document.getElementById("spinner");
       const resultsContainer = document.getElementById("results");
 
-      if (processFrameButton) {
-        processFrameButton.onclick = () => {
-          // Show spinner and clear previous results
-          spinner.style.display = "block";
-          resultsContainer.innerHTML = "";
+      let processedResults = [];
 
-          // Send process-frame message to parent
-          parent.postMessage({ pluginMessage: { type: "process-frame" } }, "*");
-        };
-      } else {
-        console.warn("Button with ID 'process-frame' not found.");
-      }
+      // Handle Process Frame button click
+      processFrameButton.onclick = () => {
+        // Show spinner and disable buttons
+        spinner.style.display = "block";
+        resultsContainer.innerHTML = "";
+        uploadImagesButton.disabled = true;
 
+        // Send process-frame message to Figma
+        parent.postMessage({ pluginMessage: { type: "process-frame" } }, "*");
+      };
+
+      // Handle Upload Images button click
+      uploadImagesButton.onclick = () => {
+        if (processedResults.length === 0) return;
+
+        // Show spinner
+        spinner.style.display = "block";
+
+        // Send upload-images message to Figma with results
+        parent.postMessage(
+          {
+            pluginMessage: { type: "upload-images", results: processedResults },
+          },
+          "*"
+        );
+      };
+
+      // Handle Close button click
+      closeButton.onclick = () => {
+        parent.postMessage({ pluginMessage: { type: "cancel" } }, "*");
+      };
+
+      // Listen for messages from Figma
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
 
         if (message.type === "process-results") {
-          // Hide spinner
+          // Hide spinner and enable Upload button
           spinner.style.display = "none";
+          uploadImagesButton.disabled = false;
 
           // Display results
+          processedResults = message.results;
           resultsContainer.innerHTML = "";
-
-          message.results.forEach((result) => {
-            const resultDiv = document.createElement("div");
-            resultDiv.style.marginBottom = "10px";
-
-            if (result.type === "image" || result.type === "artboard") {
-              const img = document.createElement("img");
-              img.src = `data:image/png;base64,${result.base64}`;
-              img.style.maxWidth = "100%";
-              img.style.border = "1px solid #ddd";
-              resultDiv.appendChild(img);
-
-              const text = document.createElement("div");
-              text.textContent = `Exported ${result.type}: ${result.name}`;
-              resultDiv.appendChild(text);
-            }
-
-            resultsContainer.appendChild(resultDiv);
+          processedResults.forEach((result) => {
+            const img = document.createElement("img");
+            img.src = `data:image/png;base64,${result.base64}`;
+            img.alt = result.name || "Unnamed Image";
+            const name = document.createElement("div");
+            name.textContent = result.name || "Unnamed Image";
+            resultsContainer.appendChild(img);
+            resultsContainer.appendChild(name);
           });
+        } else if (message.type === "success") {
+          alert(message.message);
         } else if (message.type === "error") {
-          // Hide spinner
+          alert(`Error: ${message.message}`);
+        } else if (message.type === "upload-complete") {
+          alert(message.message);
           spinner.style.display = "none";
-
-          // Show error message
-          resultsContainer.textContent = `Error: ${message.message}`;
         }
       };
     </script>
